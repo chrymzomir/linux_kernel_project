@@ -11,7 +11,13 @@
 #endif
 
 #define KBD_INPUT_PORT	0x60    /* address of keyboard input buffer */
+#define KBD_SCANCODE_MASK   0x7f
+#define KBD_STATUS_MASK     0x80
 
+#define LEFT_SHIFT 0x2a
+#define RIGHT_SHIFT 0x36
+#define LEFT_SHIFT_RELEASE 0xaa
+#define RIGHT_SHIFT_RELEASE 0xb6
 int shiftPressed = 0;
 
 // FUNCTION PROTOTYPES
@@ -78,18 +84,26 @@ static irqreturn_t get_scancode(int irq, void *dev_id)
 {
 	unsigned char scancode;
 	scancode = inb(KBD_INPUT_PORT);
-	get_key(scancode);
+
+	if (scancode == LEFT_SHIFT)
+	{
+		shiftPressed = 1;
+	}
+
+	if (scancode == LEFT_SHIFT_RELEASE)
+	{
+		shiftPressed = 0;
+	}
+
+	scancode_to_key(scancode);
     return IRQ_HANDLED;
 }
 
 void scancode_to_key(char scancode)
 {
-	i = (unsigned)scancode;
-	unsigned int i;
-
-	if (scancodes[i][0] != '\0')
+	if (scancodes[scancode][0] != '\0')
 	{
-		printk("%s\n", scancodes[i][0]);
+		printk("%s\n", scancodes[scancode][shiftPressed]);
 	}
 }
   
