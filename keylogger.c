@@ -11,8 +11,6 @@
 #endif
 
 #define KBD_INPUT_PORT	0x60    /* address of keyboard input buffer */
-#define KBD_SCANCODE_MASK   0x7f
-#define KBD_STATUS_MASK     0x80
 
 #define LEFT_SHIFT 0x2a
 #define RIGHT_SHIFT 0x36
