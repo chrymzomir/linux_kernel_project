@@ -1,3 +1,6 @@
+userInput: userInput.c
+	gcc-5 `pkg-config --cflags gtk+-3.0` -o userInput userInput.c `pkg-config --libs gtk+-3.0`
+
 ifneq ($(KERNELRELEASE),) 
 obj-m := keylogger.o
 else 
@@ -11,3 +14,5 @@ default:
 endif 
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
+
+

@@ -1,0 +1,1 @@
+cmd_/home/megan/finalProject/linux_kernel_project/keylogger.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/megan/finalProject/linux_kernel_project/keylogger.ko /home/megan/finalProject/linux_kernel_project/keylogger.o /home/megan/finalProject/linux_kernel_project/keylogger.mod.o ;  true
