@@ -102,7 +102,7 @@ struct file *createFile(const char *path)
 //Write to the output file
 int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
 {
-	mm_segment_t oldFileSpace;
+    mm_segment_t oldFileSpace;
     int ret;
 
     oldFileSpace = get_fs();
@@ -164,7 +164,8 @@ void write_buffer_to_output(void)
 {
 	int i = 0;
 	int max_size = B_SIZE;
-
+	char* display_count = "Words this program captured: ";
+ 
 	if (rollover == 0)
 	{
 		max_size = pos;
@@ -172,13 +173,16 @@ void write_buffer_to_output(void)
 
 	while (i < max_size)
 	{
+	  
 		writeToFile(outfile, 0, char_buffer[i], 1);
 		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
 		  count =+ 1;
 		}
 		i++;
 	}
-
+	
+	display_count += count;
+writeToFile(outfile, 0, display_count, 1);
 	printk("Character buffer written to output.\n");
 }
 

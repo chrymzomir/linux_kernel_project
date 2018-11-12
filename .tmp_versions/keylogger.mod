@@ -1,3 +1,3 @@
-/home/megan/finalProject/linux_kernel_project/keylogger.ko
-/home/megan/finalProject/linux_kernel_project/keylogger.o
+/home/megan/finalProject/real/linux_kernel_project/keylogger.ko
+/home/megan/finalProject/real/linux_kernel_project/keylogger.o
 

