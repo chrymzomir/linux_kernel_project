@@ -71,43 +71,42 @@ int get_timestamp_index(char c);
 /* For the 2nd index: 	index = 0, no special keys enabled
 			index = 1, only shift enabled
 			index = 2, only caps lock enabled
-			index = 3, both caps lock and shift enabled
 */
 char *scancodes[][NUMBER_OF_MODES] = {
-	{"/0", "/0", "/0"},		{"/e", "/e", "/e"},	 	{"1", "!", "1"}, 
+	{"\\0", "\\0", "\\0"},		{"ESC", "ESC", "ESC"},		{"1", "!", "1"}, 
 	{"2", "@", "2"}, 		{"3", "#", "3"}, 		{"4", "$", "4"}, 
 	{"5", "%", "5"}, 		{"6", "^", "6"}, 		{"7", "&", "7"}, 
 	{"8", "*", "8"}, 		{"9", "(", "9"}, 		{"0", ")", "0"}, 
-	{"-","_", "-"}, 		{"=", "+", "="}, 		{"/b", "/b", "/b"}, 
-	{"/t", "/t", "/t"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
+	{"-","_", "-"}, 		{"=", "+", "="}, 		{"BKSP", "BKSP", "BKSP"}, 
+	{"TAB", "TAB", "TAB"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
 	{"e", "E", "E"}, 		{"r","R", "R"}, 		{"t", "T", "T"}, 
 	{"y", "Y", "Y"}, 		{"u", "U", "U"}, 		{"i","I", "I"}, 
 	{"o", "O", "O"},		{"p", "P", "P"},		{"[", "{", "["}, 
-	{"]", "}", "]"}, 		{"/n", "/n", "/n"}, 		{"LCtrl", "LCtrl", "LCtrl"}, 
+	{"]", "}", "]"}, 		{"\\n", "\\n", "\\n"}, 		{"CTRL", "CTRL", "CTRL"}, 
 	{"a", "A", "A"}, 		{"s", "S", "S"}, 		{"d", "D", "D"}, 
 	{"f", "F", "F"}, 		{"g", "G", "G"}, 		{"h", "H", "H"}, 
 	{"j", "J", "J"}, 		{"k", "K", "K"}, 		{"l", "L", "L"}, 
 	{";", ":", ";"}, 		{"\'", "\"", "\'"}, 		{"`", "~", "`"},
-	{"LShift","LShift","LShift"},					{"\\", "|", "\\"}, 
+	{"LSHFT","LSHFT","LSHFT"},	{"\\", "|", "\\"}, 
 	{"z", "Z", "Z"}, 		{"x", "X", "X"}, 		{"c", "C", "C"}, 
 	{"v", "V", "V"}, 		{"b", "B", "B"}, 		{"n", "N", "N"},
 	{"m", "M", "M"}, 		{",", "<", ","}, 		{".", ">", "."},
-	{"/", "?", "/"},		{"RShift", "RShift", "RShift"},
-	{"PrtScn", "KeyPad", "PrtScn"},	{"LAlt", "LAlt", "LAlt"}, 
-	{" ", " ", " "}, 		{"CapsLock", "CapsLock", "CapsLock"}, 
+	{"/", "?", "/"},		{"RSHIFT", "RSHIFT", "RSHIFT"},
+	{"*", "*", "*"},		{"ALT", "ALT", "ALT"}, 
+	{" ", " ", " "}, 		{"CAPSLOCK", "CAPSLOCK", "CAPSLOCK"}, 
 	{"F1", "F1", "F1"}, 		{"F2", "F2", "F2"}, 		{"F3", "F3", "F3"}, 
 	{"F4", "F4", "F4"}, 		{"F5", "F5", "F5"}, 		{"F6", "F6", "F6"},
 	{"F7", "F7", "F7"}, 		{"F8", "F8", "F8"}, 		{"F9", "F9", "F9"},
-	{"F10", "F10", "F10"}, 		{"NumLock", "NumLock", "NumLock"}, 
-	{"ScrlLck", "ScrlLck", "ScrlLck"}, 				{"Keypad-7", "Home", "Keypad-7"}, 
-	{"Keypad-8", "Up", "Keypad-8"}, 				{"Keypad-9", "PgUp", "Keypad-9"}, 
+	{"F10", "F10", "F10"}, 		{"NUMLOCK", "NUMLOCK", "NUMLOCK"}, 
+	{"ScrlLck", "ScrlLck", "ScrlLck"}, 				{"Keypad-7", "Keypad-7", "Keypad-7"}, 
+	{"Keypad-8", "Keypad-8", "Keypad-8"}, 				{"Keypad-9", "Keypad-9", "Keypad-9"}, 
 	{"-", "-", "-"},						{"Keypad-4", "Left", "Keypad-4"},
-	{"Keypad-5", "Keypad-5", "Keypad-5"},				{"Keypad-6", "Right", "Keypad-6"},
-	{"+", "+", "+"}, 						{"Keypad-1", "End", "Keypad-1"}, 
-	{"Keypad-2", "Down", "Keypad-2"}, 				{"Keypad-3", "PgDn", "Keypad-3"},
-	{"Keypad-0", "Ins", "Keypad-0"}, 				{"Keypad-.", "Del", "Keypad-."}, 
-	{"Alt-SysRq", "Alt-SysRq", "Alt-SysRq"}, 			{"\0", "\0", "\0"}, 
-{"\0", "\0", "\0"}, {"F11", "F11", "F11"}, {"F12", "F12", "F12"} };                               
+	{"Keypad-5", "Keypad-5", "Keypad-5"},				{"Keypad-6", "Keypad-6", "Keypad-6"},
+	{"+", "+", "+"}, 						{"Keypad-1", "Keypad-1", "Keypad-1"}, 
+	{"Keypad-2", "Keypad-2", "Keypad-2"}, 				{"Keypad-3", "Keypad-3", "Keypad-3"},
+	{"Keypad-0", "Keypad-0", "Keypad-0"}, 				{"Keypad-.", "Del", "Keypad-."}, 
+	{"\0", "\0", "\0"}, 		{"\0", "\0", "\0"}, 		{"\0", "\0", "\0"}, 	
+	{"F11", "F11", "F11"}, 		{"F12", "F12", "F12"} };                              
 
 // Create the output file
 struct file *createFile(const char *path) 
@@ -171,7 +170,6 @@ void scancode_to_key(char scancode)
 			char_buffer[pos] = scancodes[scancode][CAPS_LOCK_MODE];
 		}
 
-		//TODO: implement
 		else if (capsLockEnabled == 1 && shiftPressed == 1) // both caps lock and shift enabled
 		{
 			int mode = get_mode_index(scancode);
@@ -277,7 +275,7 @@ void write_buffer_to_output(void)
 
 	while (i < max_size)
 	{
-		writeToFile(outfile, 0, char_buffer[i], 1);
+		writeToFile(outfile, 0, char_buffer[i], strlen(char_buffer[i]));
 		if(char_buffer[i]  == " " || char_buffer[i] == "/L"){
 		  count++;
 		}
