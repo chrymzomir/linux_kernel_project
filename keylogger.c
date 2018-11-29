@@ -52,7 +52,8 @@ char* raw_char_buffer[B_SIZE];
 char* simple_char_buffer[B_SIZE];
 int raw_pos = 0;
 int simple_pos = 0;
-int rollover = 0;
+int raw_rollover = 0;
+int simple_rollover = 0;
 struct mutex buffer_mutex; // used whenever the character buffer is modified
 
 // timer and timestamp variables
@@ -210,7 +211,7 @@ void scancode_to_key(char scancode)
 		if (raw_pos >= B_SIZE) 
 		{
 			raw_pos = 0;
-			rollover++;
+			raw_rollover++;
 		}
 
 		write_to_simple_buffer(scancode, key);
@@ -273,8 +274,11 @@ void write_to_simple_buffer(char scancode, char* key)
 
 		else if (scancode == BACKSPACE) // NOTE: backspace can be buggy if used right after switching windows
 		{
-			simple_pos--;
-			simple_char_buffer[simple_pos] = "\0";
+			if ((simple_pos - 1) != 0)
+			{
+				simple_pos--;
+				simple_char_buffer[simple_pos] = "\0";
+			}
 		}
 
 		else if (scancode == TAB)
@@ -288,6 +292,13 @@ void write_to_simple_buffer(char scancode, char* key)
 			simple_char_buffer[simple_pos] = key;
 			simple_pos++;
 		}
+	}
+
+	// check that simple_pos is within the index range of simple_char_buffer
+	if (simple_pos >= B_SIZE)
+	{
+		simple_rollover++;
+		simple_pos = 0;
 	}
 }
 
@@ -330,16 +341,22 @@ void check_shift_and_caps(unsigned char scancode)
 void write_buffer_to_output(void)
 {
 	int i = 0;
-	int max_size = B_SIZE;
+	int max_raw_size = B_SIZE;
+	int max_simple_size = B_SIZE;
 	char* display_count = "Words this program captured: ";
  
-	if (rollover == 0)
+	if (raw_rollover == 0)
 	{
-		max_size = raw_pos;
+		max_raw_size = raw_pos;
+	}
+
+	if (simple_rollover == 0)
+	{
+		max_simple_size = simple_pos;
 	}
 
 	// write raw buffer to output
-	while (i < max_size)
+	while (i < max_raw_size)
 	{
 		write_to_file(raw_outfile, 0, raw_char_buffer[i], strlen(raw_char_buffer[i]));
 		if(raw_char_buffer[i]  == " ") {
@@ -350,7 +367,7 @@ void write_buffer_to_output(void)
 
 	// write simple buffer to output
 	i = 0;
-	while (i < simple_pos)
+	while (i < max_simple_size)
 	{
 		write_to_file(simple_outfile, 0, simple_char_buffer[i], strlen(simple_char_buffer[i]));
 		i++;
