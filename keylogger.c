@@ -341,7 +341,7 @@ void write_buffer_to_output(void)
 	int i = 0;
 	int max_raw_size = B_SIZE;
 	int max_simple_size = B_SIZE;
-	int simple_word_count = 1;
+	int word_count = 1;
  
 	if (raw_rollover == 0)
 	{
@@ -365,7 +365,7 @@ void write_buffer_to_output(void)
 	while (i < max_simple_size)
 	{
 		if(simple_char_buffer[i]  == " ") {
-		  simple_word_count++;
+		  word_count++;
 		}
 		write_to_file(simple_outfile, 0, simple_char_buffer[i], strlen(simple_char_buffer[i]));
 		i++;
